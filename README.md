@@ -1,5 +1,4 @@
 # Fine-Tuned BERT Model for YouTube Comment Classification
-
 This repository hosts a fine-tuned [BERT](https://huggingface.co/transformers/model_doc/bert.html) model for classifying YouTube comments into specific categories. The model is designed to support both fine-tuned classification and **zero-shot classification** for flexible and efficient comment analysis.
 
 ## Model Overview
