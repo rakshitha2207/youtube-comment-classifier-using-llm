@@ -1,10 +1,8 @@
-HTML_TEMPLATE = """
-<!DOCTYPE html>
+HTML_TEMPLATE="""<!DOCTYPE html>
 <html>
 <head>
     <title>YouTube Comment Analyzer</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             background-color: #f8f9fa;
@@ -165,15 +163,22 @@ HTML_TEMPLATE = """
         let resultsChart = null;
 
         function toggleComments(elementId) {
-            // Hide all comment sections
-            document.querySelectorAll('.comments-section').forEach(section => {
-                section.style.display = 'none';
-            });
-            
-            // Show the selected section
-            const selectedSection = document.getElementById(elementId);
-            selectedSection.style.display = selectedSection.style.display === 'block' ? 'none' : 'block';
-        }
+    // Get the selected section
+    const selectedSection = document.getElementById(elementId);
+
+    // Check if the section is already visible
+    const isVisible = selectedSection.style.display === 'block';
+
+    // Hide all comment sections
+    document.querySelectorAll('.comments-section').forEach(section => {
+        section.style.display = 'none';
+    });
+
+    // If the section was not visible, show it, else leave all hidden
+    if (!isVisible) {
+        selectedSection.style.display = 'block';
+    }
+}
 
         function displayResults(data) {
             // Show results sections
@@ -245,7 +250,7 @@ HTML_TEMPLATE = """
                                 label: function(context) {
                                     const value = context.raw;
                                     const percentage = ((value / total) * 100).toFixed(1);
-                                    return ${context.label}: ${value} (${percentage}%);
+                                    return `${context.label}: ${value} (${percentage}%)`;  // Corrected the template literal syntax
                                 }
                             }
                         }
@@ -323,4 +328,4 @@ HTML_TEMPLATE = """
     </script>
 </body>
 </html>
-"""  
+"""
