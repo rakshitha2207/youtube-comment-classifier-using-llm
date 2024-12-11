@@ -4,6 +4,7 @@ from transformers import pipeline
 import os
 import logging
 from template import HTML_TEMPLATE  # We'll create this in a separate file
+import torch
 
 # Set up logging with more detailed format
 logging.basicConfig(
@@ -30,7 +31,7 @@ try:
     classifier = pipeline(
         "zero-shot-classification",
         model="facebook/bart-large-mnli",
-        device="cpu"
+        device=0 if torch.cuda.is_available() else -1
     )
     logger.info("Classifier initialized successfully")
 except Exception as e:
@@ -62,21 +63,13 @@ def get_video_comments(video_id):
             maxResults=100,
             textFormat="plainText"
         )
-        
-        if not request:
-            logger.error("Failed to create request object")
-            return []
-            
+
         while request and len(comments) < 100:
             try:
                 response = request.execute()
                 items = response.get('items', [])
                 logger.info(f"Fetched {len(items)} comments")
-                
-                if not items:
-                    logger.warning(f"No comments found for video {video_id}")
-                    break
-                
+
                 for item in items:
                     try:
                         comment = item['snippet']['topLevelComment']['snippet']['textDisplay']
@@ -85,16 +78,16 @@ def get_video_comments(video_id):
                     except KeyError as e:
                         logger.error(f"Error extracting comment text: {e}")
                         continue
-                
+
                 request = youtube.commentThreads().list_next(request, response)
-                
+
             except Exception as e:
                 logger.error(f"Error executing request: {e}")
                 break
-        
+
         logger.info(f"Total comments collected: {len(comments)}")
         return comments
-        
+
     except Exception as e:
         logger.error(f"Error in get_video_comments: {e}")
         raise
@@ -114,10 +107,10 @@ def classify_comment(comment):
                 'check my channel', 'sub4sub', 'subscribe to my'
             ])
         ]
-        
+
         if sum(spam_indicators) >= 2:
             return "spam"
-            
+
         results = classifier(
             sequences=comment,
             candidate_labels=[
@@ -128,16 +121,16 @@ def classify_comment(comment):
             ],
             multi_label=False
         )
-        
+
         label_mapping = {
             "relevant discussion": "relevant",
             "promotional or spam": "spam",
             "appreciation or praise": "appreciation",
             "complaint or criticism": "grievance"
         }
-        
+
         return label_mapping[results['labels'][0]]
-        
+
     except Exception as e:
         logger.error(f"Error classifying comment: {e}")
         raise
@@ -151,18 +144,18 @@ def analyze_video_comments():
     try:
         data = request.get_json()
         video_url = data.get('video_url')
-        
+
         if not video_url:
             logger.error("No video URL provided")
             return jsonify({'error': 'No video URL provided'}), 400
-            
+
         # Extract video ID
         try:
             video_id = extract_video_id(video_url)
             logger.info(f"Processing video ID: {video_id}")
         except ValueError as e:
             return jsonify({'error': str(e)}), 400
-            
+
         # Get comments
         try:
             comments = get_video_comments(video_id)
@@ -171,7 +164,7 @@ def analyze_video_comments():
         except Exception as e:
             logger.error(f"Error fetching comments: {e}")
             return jsonify({'error': f'Failed to fetch comments: {str(e)}'}), 400
-            
+
         # Classify comments
         classified_comments = {
             'relevant': [],
@@ -179,7 +172,7 @@ def analyze_video_comments():
             'appreciation': [],
             'grievance': []
         }
-        
+
         for i, comment in enumerate(comments):
             try:
                 classification = classify_comment(comment)
@@ -189,13 +182,13 @@ def analyze_video_comments():
             except Exception as e:
                 logger.error(f"Error classifying comment: {e}")
                 continue
-        
+
         # Log results
         for category, comments_list in classified_comments.items():
             logger.info(f"{category}: {len(comments_list)} comments")
-        
+
         return jsonify(classified_comments)
-        
+
     except Exception as e:
         logger.error(f"Unexpected error in analyze_video_comments: {e}")
         return jsonify({'error': str(e)}), 400
